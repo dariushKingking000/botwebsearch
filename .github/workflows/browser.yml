@@ -1,84 +1,60 @@
-name: 🎮 Browser Automation
+name: 🎮 Browser Bot
 on:
   repository_dispatch:
     types: [browser-action]
-
-permissions:
-  contents: write
-  id-token: write
 
 jobs:
   browser:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+    - uses: actions/setup-node@v4
+      with: { node-version: 20 }
     
-    - name: Install dependencies
-      run: npm init -y && npm i playwright
+    - run: npm init -y && npm i playwright
     
-    - name: Install Playwright browsers
-      run: npx playwright install --with-deps chromium
+    - run: npx playwright install chromium
     
-    - name: 🖱️ Execute Browser Action
+    - name: 🎯 Action
       env:
-        ACTION: ${{ github.event.client_payload.action }}
+        ACTION_TYPE: ${{ github.event.client_payload.type }}
         X: ${{ github.event.client_payload.x }}
         Y: ${{ github.event.client_payload.y }}
         TEXT: ${{ github.event.client_payload.text }}
       run: |
-        cat > browser.js << 'EOF'
+        cat > run.js << EOF
         const { chromium } = require('playwright');
         (async () => {
-          console.log('🚀 Browser شروع...');
-          const browser = await chromium.launch({ 
-            headless: false,
-            slowMo: 500 
-          });
+          const browser = await chromium.launch({headless: false, slowMo: 300});
           const page = await browser.newPage();
-          await page.goto('https://www.google.com');
-          await page.waitForTimeout(2000);
+          await page.goto('https://google.com');
           
-          const action = process.env.ACTION || 'click';
+          const type = process.env.ACTION_TYPE || 'click';
           const x = parseInt(process.env.X) || 300;
           const y = parseInt(process.env.Y) || 400;
-          const text = process.env.TEXT || 'test';
+          const text = process.env.TEXT || '';
           
-          console.log(`📱 Action: ${action} | X:${x} Y:${y} | Text: "${text}"`);
+          console.log(\`📱 \${type} | \${x},\${y} | "\${text}"\`);
           
-          if (action === 'click') {
-            await page.mouse.click(x, y);
-          } else if (action === 'type') {
+          if(type === 'click') await page.mouse.click(x, y);
+          if(type === 'type') {
             await page.fill('textarea[name="q"]', text);
             await page.press('textarea[name="q"]', 'Enter');
-            await page.waitForTimeout(4000); // نتایج لود بشه
+            await page.waitForTimeout(3000);
           }
           
-          const timestamp = Date.now();
-          await page.screenshot({ 
-            path: `screenshot-${timestamp}.png`, 
-            fullPage: true 
-          });
-          
-          console.log(`✅ screenshot-${timestamp}.png ذخیره شد!`);
+          const ts = Date.now();
+          await page.screenshot({path: \`shot-\${ts}.png\`, fullPage: true});
+          console.log('✅ Screenshot OK');
           await browser.close();
-        })().catch(e => console.error('❌ خطا:', e));
+        })();
         EOF
         
-        node browser.js
+        node run.js
         
-        ls -la *.png
-    
-    - name: 💾 Commit Screenshots
-      run: |
-        git config user.name "Browser Bot"
+        git config user.name "Bot"
         git config user.email "bot@github.com"
         git add *.png
-        git commit -m "🎮 Screenshot: ${{ github.event.client_payload.action }} (${{ github.event.client_payload.x }},${{ github.event.client_payload.y }})" || echo "هیچ تغییری نبود"
+        git commit -m "🎮 $ACTION_TYPE $X $Y" || true
         git push
