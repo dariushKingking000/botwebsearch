@@ -1,69 +1,84 @@
-name: 🎮 Interactive Browser
+name: 🎮 Browser Automation
 on:
-  workflow_dispatch: {}  # دستی
-  repository_dispatch:   # از Node-RED
+  repository_dispatch:
     types: [browser-action]
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   browser:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
-    - uses: actions/setup-node@v4
       with:
-        node-version: 20
+        token: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Install
-      run: npm i playwright
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
     
-    - name: npx playwright install
-      run: npx playwright install chromium
+    - name: Install dependencies
+      run: npm init -y && npm i playwright
     
-    - name: 🎯 Browser Action
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps chromium
+    
+    - name: 🖱️ Execute Browser Action
       env:
-        ACTION: ${{ github.event.client_payload.action || 'click' }}
-        X: ${{ github.event.client_payload.x || 300 }}
-        Y: ${{ github.event.client_payload.y || 400 }}
-        TEXT: ${{ github.event.client_payload.text || 'test' }}
+        ACTION: ${{ github.event.client_payload.action }}
+        X: ${{ github.event.client_payload.x }}
+        Y: ${{ github.event.client_payload.y }}
+        TEXT: ${{ github.event.client_payload.text }}
       run: |
-        cat > action.js << 'EOF'
+        cat > browser.js << 'EOF'
         const { chromium } = require('playwright');
         (async () => {
-          const browser = await chromium.launch({headless: false});
+          console.log('🚀 Browser شروع...');
+          const browser = await chromium.launch({ 
+            headless: false,
+            slowMo: 500 
+          });
           const page = await browser.newPage();
-          await page.goto('https://google.com');
+          await page.goto('https://www.google.com');
+          await page.waitForTimeout(2000);
           
-          const action = process.env.ACTION;
-          const x = parseInt(process.env.X);
-          const y = parseInt(process.env.Y);
-          const text = process.env.TEXT;
+          const action = process.env.ACTION || 'click';
+          const x = parseInt(process.env.X) || 300;
+          const y = parseInt(process.env.Y) || 400;
+          const text = process.env.TEXT || 'test';
           
-          console.log(`📱 Action: ${action}, X:${x}, Y:${y}, Text:"${text}"`);
+          console.log(`📱 Action: ${action} | X:${x} Y:${y} | Text: "${text}"`);
           
           if (action === 'click') {
             await page.mouse.click(x, y);
           } else if (action === 'type') {
             await page.fill('textarea[name="q"]', text);
             await page.press('textarea[name="q"]', 'Enter');
-            await page.waitForTimeout(3000);
+            await page.waitForTimeout(4000); // نتایج لود بشه
           }
           
-          const ts = Date.now();
-          await page.screenshot({path: `screen-${ts}.png`, fullPage: true});
-          console.log(`✅ screen-${ts}.png`);
+          const timestamp = Date.now();
+          await page.screenshot({ 
+            path: `screenshot-${timestamp}.png`, 
+            fullPage: true 
+          });
+          
+          console.log(`✅ screenshot-${timestamp}.png ذخیره شد!`);
           await browser.close();
-        })().catch(console.error);
+        })().catch(e => console.error('❌ خطا:', e));
         EOF
         
-        node action.js
+        node browser.js
         
-        # Git commit
+        ls -la *.png
+    
+    - name: 💾 Commit Screenshots
+      run: |
         git config user.name "Browser Bot"
         git config user.email "bot@github.com"
         git add *.png
-        git commit -m "🎮 Screen: $ACTION $X $Y" || true
+        git commit -m "🎮 Screenshot: ${{ github.event.client_payload.action }} (${{ github.event.client_payload.x }},${{ github.event.client_payload.y }})" || echo "هیچ تغییری نبود"
         git push
