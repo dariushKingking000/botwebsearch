@@ -1,4 +1,4 @@
-name: 🎮 Browser Bot
+name: Browser Automation
 on:
   repository_dispatch:
     types: [browser-action]
@@ -9,52 +9,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - uses: actions/setup-node@v4
-      with: { node-version: 20 }
+    - uses: microsoft/playwright-github-action@v1
+      with:
+        playwright-version: '1.45.0'
     
-    - run: npm init -y && npm i playwright
-    
-    - run: npx playwright install chromium
-    
-    - name: 🎯 Action
-      env:
-        ACTION_TYPE: ${{ github.event.client_payload.type }}
-        X: ${{ github.event.client_payload.x }}
-        Y: ${{ github.event.client_payload.y }}
-        TEXT: ${{ github.event.client_payload.text }}
-      run: |
-        cat > run.js << EOF
-        const { chromium } = require('playwright');
-        (async () => {
-          const browser = await chromium.launch({headless: false, slowMo: 300});
-          const page = await browser.newPage();
-          await page.goto('https://google.com');
-          
-          const type = process.env.ACTION_TYPE || 'click';
-          const x = parseInt(process.env.X) || 300;
-          const y = parseInt(process.env.Y) || 400;
-          const text = process.env.TEXT || '';
-          
-          console.log(\`📱 \${type} | \${x},\${y} | "\${text}"\`);
-          
-          if(type === 'click') await page.mouse.click(x, y);
-          if(type === 'type') {
-            await page.fill('textarea[name="q"]', text);
-            await page.press('textarea[name="q"]', 'Enter');
-            await page.waitForTimeout(3000);
-          }
-          
-          const ts = Date.now();
-          await page.screenshot({path: \`shot-\${ts}.png\`, fullPage: true});
-          console.log('✅ Screenshot OK');
-          await browser.close();
-        })();
-        EOF
-        
-        node run.js
-        
-        git config user.name "Bot"
-        git config user.email "bot@github.com"
-        git add *.png
-        git commit -m "🎮 $ACTION_TYPE $X $Y" || true
-        git push
+    - name: Run Browser Action
+      run: npx playwright test --project=chromium
+      
+    - name: Upload Screenshot
+      uses: actions/upload-artifact@v4
+      with:
+        name: screenshot.png
+        path: test-results/*.png
