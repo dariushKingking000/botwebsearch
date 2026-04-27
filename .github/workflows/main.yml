@@ -1,23 +1,11 @@
-name: Browser Automation
-on:
-  repository_dispatch:
-    types: [browser-action]
-
+name: Deploy
+on: [push]
 jobs:
-  browser:
+  deploy:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
-    - uses: microsoft/playwright-github-action@v1
+    - uses: actions/upload-pages-artifact@v3
       with:
-        playwright-version: '1.45.0'
-    
-    - name: Run Browser Action
-      run: npx playwright test --project=chromium
-      
-    - name: Upload Screenshot
-      uses: actions/upload-artifact@v4
-      with:
-        name: screenshot.png
-        path: test-results/*.png
+        path: .
+    - uses: actions/deploy-pages@v4
