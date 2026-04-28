@@ -1,82 +1,43 @@
-name: 🎭 Complete Playwright + Selenium
-on: [workflow_dispatch]
+name: Install Playwright in Codespace
+
+on:
+  workflow_dispatch:  # دستی اجرا کن یا trigger دلخواه
 
 jobs:
-  setup:
+  setup-playwright:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      codespaces: write
+    
     steps:
-    - name: 📥 Checkout
+    - name: Checkout repo
       uses: actions/checkout@v4
-      
-    - name: 🛠️ Setup Node.js
+    
+    - name: Setup Codespace
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        
-    - name: 🐍 Setup Python
-      uses: actions/setup-python@v5
-      with:
-        node-version: '3.11'
-        
-    - name: 🎭 Install Playwright
+    
+    # آپلود Playwright به Codespace
+    - name: Install Playwright Binaries
       run: |
-        npm init -y
-        npm install @playwright/test
-        npx playwright install --with-deps chromium
-        echo "✅ Playwright version: $(npx playwright --version)"
-        
-    - name: 🐍 Install Selenium
-      run: |
-        pip install selenium==4.25.0 webdriver-manager
-        python -c "import selenium; print('✅ Selenium:', selenium.__version__)"
-        
-    - name: 📊 Show Versions
-      run: |
-        echo "Node: $(node --version)"
-        echo "Python: $(python --version)"
-        echo "npm: $(npm --version)"
-        ls -la node_modules/.bin/ | grep playwright
-        npx playwright --version
-        python -c "import selenium; print(selenium.__version__)"
-        
-    - name: 📄 Create Test Files
-      run: |
-        cat > playwright-test.js << 'EOF'
-        const { test, expect } = require('@playwright/test');
-        test('GitHub Test', async ({ page }) => {
-          await page.goto('https://github.com');
-          await expect(page).toHaveTitle(/GitHub/);
-          console.log('✅ Playwright OK!');
-        });
-        EOF
-        
-        cat > selenium-test.py << 'EOF'
-        from selenium import webdriver
-        from selenium.webdriver.chrome.service import Service
-        from webdriver_manager.chrome import ChromeDriverManager
-        
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service)
-        driver.get("https://github.com")
-        print(f"✅ Selenium OK! Title: {driver.title}")
-        driver.quit()
-        EOF
-        
-    - name: 🚀 Run Tests
-      run: |
-        echo "🎭 Playwright Test:"
-        npx playwright test playwright-test.js
-        
-        echo "🐍 Selenium Test:"
-        python selenium-test.py
-        
-    - name: 💾 Push Changes
+        npm init playwright@latest -- --yes
+        npx playwright install --with-deps
+    
+    # Commit تغییرات (package.json, playwright config)
+    - name: Commit Playwright files
       run: |
         git config user.name "GitHub Action"
         git config user.email "action@github.com"
         git add .
-        git commit -m "Add Playwright + Selenium setup" || echo "No changes"
+        git commit -m "Add Playwright setup" || echo "No changes"
         git push
-        git add auto-setup.yml  
-        git commit -m "Auto setup"
-        git push origin main
+    
+    # آپلود مستقیم به Codespace storage (اختیاری)
+    - name: Upload to Codespace
+      uses: gh-copilot/codespace-action@v1
+      with:
+        command: |
+          cd /workspaces/${{ github.repository }}
+          npx playwright install --with-deps
