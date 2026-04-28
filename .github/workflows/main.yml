@@ -1,25 +1,23 @@
-name: Preview Server
-on: [push, pull_request]
+name: Local Server
+on: [push]
 
 jobs:
-  preview:
+  test-server:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with: 
+    - uses: actions/setup-node@v4
+      with:
         node-version: 20
-        cache: 'npm'
     
-    - name: Install
-      run: npm install
+    - name: Install serve
+      run: npm install -g serve
       
-    - name: Start & Test Server
+    - name: Run Server
       run: |
-        npx serve -s . -l 3000 &
+        serve -s . -l 3000 &
         PID=$!
-        sleep 10
-        curl -f http://localhost:3000 || (kill $PID && exit 1)
+        sleep 5
+        curl -f http://localhost:3000 || exit 1
         kill $PID
