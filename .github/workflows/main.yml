@@ -1,59 +1,28 @@
-name: 🚀 Deploy + SSH Setup
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+name: 🚀 Codespace Auto Deploy
+on: [push, workflow_dispatch]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: 🔧 Setup SSH Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.CODESPACES_SSH_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H ${{ secrets.CODESPACES_HOST }} >> ~/.ssh/known_hosts
     
-    # 🔧 SSH + Health Check
-    - name: 🔑 Setup & Test SSH
-      uses: appleboy/ssh-action@v1.0.3
-      timeout-minutes: 5
-      with:
-        host: fantastic-spark-g4jj74wxv55j3w9v7.github.dev
-        username: vscode
-        key: ${{ secrets.CODESPACES_SSH_KEY }}
-        port: 22
-        script_stop: true
-        script: |
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKgj81hDQdb17CcsPTYyRKiShTrzYyAXP98MyKt+IM9/ github-actions" >> ~/.ssh/authorized_keys
-          chmod 600 ~/.ssh/authorized_keys
-          sudo service ssh restart || true
-          echo "✅ SSH Active | Uptime: $(uptime)"
-    
-    # 🚀 Deploy + Restart
-    - name: 🚀 Deploy App
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: fantastic-spark-g4jj74wxv55j3w9v7.github.dev
-        username: vscode
-        key: ${{ secrets.CODESPACES_SSH_KEY }}
-        port: 22
-        script: |
-          cd /workspaces/botwebsearch || (git clone https://github.com/dariushKingking000/botwebsearch /workspaces/botwebsearch && cd /workspaces/botwebsearch)
-          
-          git pull origin main
-          npm ci --production
-          
-          pkill -f "npm start" || true
-          sleep 2
-          
-          nohup npm start > app.log 2>&1 &
-          sleep 5
-          
-          if pgrep -f "npm start"; then
-            echo "✅ Deployed! PID: $(pgrep -f 'npm start')"
-            echo "📊 Logs:"
-            tail -15 app.log
-            curl -s localhost:3000 || echo "⚠️  Port check failed"
-          else
-            echo "❌ App failed to start"
-            tail -20 app.log
-            exit 1
-          fi
+    - name: 🚀 Deploy to Codespace
+      run: |
+        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 vscode@${{ secrets.CODESPACES_HOST }} "
+          cd /workspaces/botwebsearch || git clone https://github.com/dariushKingking000/botwebsearch /workspaces/botwebsearch &&
+          cd /workspaces/botwebsearch &&
+          git pull origin main &&
+          npm ci --production &&
+          pkill -f 'npm start' || true &&
+          sleep 2 &&
+          nohup npm start > app.log 2>&1 & &&
+          sleep 5 &&
+          echo '✅ Status:' &&
+          pgrep -f 'npm start' && tail -15 app.log || echo '❌ Failed'
+        "
