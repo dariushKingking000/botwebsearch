@@ -1,26 +1,46 @@
-name: 🔧 Setup SSH Config
+name: 🚀 Deploy + SSH Setup
 on:
-  workflow_dispatch:  # دستی اجرا کن
+  push:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  ssh-setup:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-    - name: 🔑 SSH Config to Codespace
+    - uses: actions/checkout@v4
+    
+    # 🔧 SSH Setup
+    - name: 🔑 Setup SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: fictional-space-acorn-pj44pjq75j7526jwj-44334.app.github.dev
+        host: fictional-space-acorn-pj44pjq75j7526jwj.github.dev
         username: vscode
         key: ${{ secrets.CODESPACES_SSH_KEY }}
         port: 22
         script: |
-          echo "🔧 Setting up SSH..."
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          
-          # GitHub Actions public key
           echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKgj81hDQdb17CcsPTYyRKiShTrzYyAXP98MyKt+IM9/ github-actions" >> ~/.ssh/authorized_keys
           chmod 600 ~/.ssh/authorized_keys
+          sudo service ssh restart || true
+          echo "✅ SSH Ready!"
+    
+    # 🚀 Deploy
+    - name: 🚀 Deploy App
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: fictional-space-acorn-pj44pjq75j7526jwj.github.dev
+        username: vscode
+        key: ${{ secrets.CODESPACES_SSH_KEY }}
+        port: 22
+        script: |
+          cd /workspaces/botwebsearch || echo "❌ No project folder"
+          pwd && ls -la
           
-          sudo service ssh restart || echo "SSH restarted"
-          echo "✅ SSH Config Complete!"
-          whoami && pwd
+          git pull origin main || git clone https://github.com/dariushKingking000/botwebsearch .
+          npm install
+          pkill node || true
+          nohup npm start > app.log 2>&1 &
+          sleep 3
+          echo "✅ Deployed! Logs:"
+          tail -10 app.log
