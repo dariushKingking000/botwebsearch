@@ -1,50 +1,26 @@
-name: Check or Create SSH Config
-
+name: 🔧 Setup SSH Config
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # دستی اجرا کن
 
 jobs:
-  ssh-config-check:
+  ssh-setup:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Fix HOME to real runner home
-        run: |
-          echo "Real HOME is: $HOME"
-          export HOME="/home/runner"
-          echo "Adjusted HOME: $HOME"
-
-      - name: Show HOME and prepare .ssh
-        run: |
-          echo "HOME is: $HOME"
-          mkdir -p "$HOME/.ssh"
-          ls -la "$HOME"
-
-      - name: Check or create SSH config
-        run: |
-          CONFIG="$HOME/.ssh/config"
-
-          if [ -f "$CONFIG" ]; then
-            echo "✅ Found existing SSH config"
-            echo "---- Existing config ----"
-            cat "$CONFIG"
-            echo "-------------------------"
-          else
-            echo "⚠️ No SSH config found. Creating..."
-            cat << 'EOF' > "$CONFIG"
-Host github-codespace
-    HostName YOUR-CODESPACE-ID.github.dev
-    User codespace
-    IdentityFile ~/.ssh/id_ed25519
-    ServerAliveInterval 60
-    ServerAliveCountMax 6
-    ControlMaster auto
-    ControlPath ~/.ssh/cm-%r@%h:%p
-    ControlPersist yes
-EOF
-            chmod 600 "$CONFIG"
-
-            echo "---- New config ----"
-            cat "$CONFIG"
-            echo "--------------------"
-          fi
+    - name: 🔑 SSH Config to Codespace
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: fictional-space-acorn-pj44pjq75j7526jwj-44334.app.github.dev
+        username: vscode
+        key: ${{ secrets.CODESPACES_SSH_KEY }}
+        port: 22
+        script: |
+          echo "🔧 Setting up SSH..."
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          
+          # GitHub Actions public key
+          echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKgj81hDQdb17CcsPTYyRKiShTrzYyAXP98MyKt+IM9/ github-actions" >> ~/.ssh/authorized_keys
+          chmod 600 ~/.ssh/authorized_keys
+          
+          sudo service ssh restart || echo "SSH restarted"
+          echo "✅ SSH Config Complete!"
+          whoami && pwd
