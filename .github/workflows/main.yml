@@ -1,23 +1,17 @@
-name: Local Server
+name: Deploy Preview
 on: [push]
 
 jobs:
-  test-server:
+  preview:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     
-    - uses: actions/setup-node@v4
+    - name: Deploy to Surge
+      uses: dswistowski/surge-preview@v1
       with:
-        node-version: 20
-    
-    - name: Install serve
-      run: npm install -g serve
-      
-    - name: Run Server
-      run: |
-        serve -s . -l 3000 &
-        PID=$!
-        sleep 5
-        curl -f http://localhost:3000 || exit 1
-        kill $PID
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        surge_login: ${{ secrets.SURGE_LOGIN }}
+        surge_token: ${{ secrets.SURGE_TOKEN }}
+        surge_project: './'
+        surge_domain: 'dariush-bot-${{ github.sha }}.surge.sh'
