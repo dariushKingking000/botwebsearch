@@ -1,27 +1,37 @@
 name: Check or Create SSH Config
 
 on:
-  workflow_dispatch:  # اجرا به صورت دستی از تب Actions
+  workflow_dispatch:
 
 jobs:
   ssh-config-check:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check if SSH config exists
+      - name: Fix HOME to real runner home
         run: |
-          echo "🔍 Checking for SSH config at $HOME/.ssh/config ..."
+          echo "Real HOME is: $HOME"
+          export HOME="/home/runner"
+          echo "Adjusted HOME: $HOME"
 
-          if [ -f "$HOME/.ssh/config" ]; then
-            echo "✅ SSH config already exists!"
+      - name: Show HOME and prepare .ssh
+        run: |
+          echo "HOME is: $HOME"
+          mkdir -p "$HOME/.ssh"
+          ls -la "$HOME"
+
+      - name: Check or create SSH config
+        run: |
+          CONFIG="$HOME/.ssh/config"
+
+          if [ -f "$CONFIG" ]; then
+            echo "✅ Found existing SSH config"
             echo "---- Existing config ----"
-            cat "$HOME/.ssh/config"
+            cat "$CONFIG"
             echo "-------------------------"
           else
-            echo "⚠️ No SSH config found. Creating a new one..."
-            mkdir -p "$HOME/.ssh"
-
-            cat << 'EOF' > "$HOME/.ssh/config"
+            echo "⚠️ No SSH config found. Creating..."
+            cat << 'EOF' > "$CONFIG"
 Host github-codespace
     HostName YOUR-CODESPACE-ID.github.dev
     User codespace
@@ -32,14 +42,9 @@ Host github-codespace
     ControlPath ~/.ssh/cm-%r@%h:%p
     ControlPersist yes
 EOF
+            chmod 600 "$CONFIG"
 
-            chmod 600 "$HOME/.ssh/config"
-
-            echo "✅ Created SSH config successfully."
             echo "---- New config ----"
-            cat "$HOME/.ssh/config"
+            cat "$CONFIG"
             echo "--------------------"
           fi
-
-      - name: Finish
-        run: echo "🎉 SSH config check complete!"
