@@ -1,5 +1,5 @@
-name: Serve Localhost
-on: [push, pull_request]  # خط 2 درست است!
+name: Preview Server
+on: [push, pull_request]
 
 jobs:
   preview:
@@ -7,16 +7,19 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Setup Node
+    - name: Setup Node.js
       uses: actions/setup-node@v4
-      with:
+      with: 
         node-version: 20
+        cache: 'npm'
     
     - name: Install
-      run: npm ci
-    
-    - name: Test Server
+      run: npm install
+      
+    - name: Start & Test Server
       run: |
-        npm start &  # اپت رو start کن
-        sleep 5
-        curl -f http://localhost:3000
+        npx serve -s . -l 3000 &
+        PID=$!
+        sleep 10
+        curl -f http://localhost:3000 || (kill $PID && exit 1)
+        kill $PID
