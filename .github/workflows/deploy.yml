@@ -15,23 +15,27 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.CODESPACES_SSH_KEY }}" > private_key
         chmod 600 private_key
-        ssh-keygen -y -f private_key > authorized_keys
-        
+        ssh-keyscan -H fictional-space-acorn-pj44pjq75j7526jwj-44334.app.github.dev >> ~/.ssh/known_hosts
+    
     - name: 🚀 Deploy to Codespace
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: fictional-space-acorn-pj44pjq75j7526jwj
+        host: fictional-space-acorn-pj44pjq75j7526jwj-44334.app.github.dev
         username: vscode
         key: ${{ secrets.CODESPACES_SSH_KEY }}
         port: 22
         script: |
           mkdir -p ~/.ssh
-          echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKgj81hDQdb17CcsPTYyRKiShTrzYyAXP98MyKt+IM9/ github-actions" >> ~/.ssh/authorized_keys
-          chmod 600 ~/.ssh/authorized_keys
+          chmod 700 ~/.ssh
           
-          cd /workspaces/${{ github.event.repository.name }}
-          echo "🔥 Deployed from GitHub Actions!"
+          cd /workspaces/botwebsearch
+          echo "🔥 Deploying from GitHub Actions!"
+          
           git pull origin main || true
-          # npm install && npm start  # دستورات خودت
           
-          echo "✅ Success!"
+          # دستورات خودت (فعال کن):
+          # npm install
+          # npm run build
+          # npm start
+          
+          echo "✅ Deploy completed!"
