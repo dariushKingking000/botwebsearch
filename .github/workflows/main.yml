@@ -1,43 +1,38 @@
 name: Install Playwright in Codespace
 
 on:
-  workflow_dispatch:  # دستی اجرا کن یا trigger دلخواه
+  workflow_dispatch:
 
 jobs:
   setup-playwright:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      codespaces: write
     
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Setup Codespace
+    - name: Setup Node
       uses: actions/setup-node@v4
       with:
         node-version: '20'
     
-    # آپلود Playwright به Codespace
-    - name: Install Playwright Binaries
+    - name: Install Playwright
       run: |
-        npm init playwright@latest -- --yes
+        npm init playwright@latest --yes
         npx playwright install --with-deps
     
-    # Commit تغییرات (package.json, playwright config)
-    - name: Commit Playwright files
+    - name: Commit files
       run: |
         git config user.name "GitHub Action"
         git config user.email "action@github.com"
         git add .
-        git commit -m "Add Playwright setup" || echo "No changes"
-        git push
-    
-    # آپلود مستقیم به Codespace storage (اختیاری)
-    - name: Upload to Codespace
-      uses: gh-copilot/codespace-action@v1
-      with:
-        command: |
-          cd /workspaces/${{ github.repository }}
-          npx playwright install --with-deps
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "chore: add Playwright setup"
+          git push
+        fi
