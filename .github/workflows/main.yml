@@ -1,38 +1,48 @@
-name: Install Playwright in Codespace
-
+name: 🎭 Setup Playwright
 on:
   workflow_dispatch:
+  push:
+    paths: ['package.json']
 
 jobs:
-  setup-playwright:
+  install-playwright:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    
     steps:
-    - name: Checkout repo
-      uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/checkout@v4
     
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    
-    - name: Install Playwright
+    - name: Create Playwright config
       run: |
-        npm init playwright@latest --yes
-        npx playwright install --with-deps
+        mkdir -p .github/workflows
+        cat > playwright.config.ts << 'EOF'
+        import { defineConfig } from '@playwright/test';
+        export default defineConfig({
+          testDir: './tests',
+          fullyParallel: true,
+          retries: 1,
+          use: { baseURL: 'http://localhost:3000' }
+        });
+        EOF
+        
+        cat > package.json << 'EOF'
+        {
+          "name": "your-repo",
+          "scripts": {
+            "playwright:install": "playwright install --with-deps",
+            "test": "playwright test"
+          },
+          "devDependencies": {
+            "@playwright/test": "^1.47.0"
+          }
+        }
+        EOF
+        
+        mkdir -p tests
+        echo 'import { test } from "@playwright/test"; test("basic", async ({ page }) => { await page.goto("https://example.com"); });' > tests/example.spec.ts
     
-    - name: Commit files
+    - name: Commit changes
       run: |
         git config user.name "GitHub Action"
         git config user.email "action@github.com"
         git add .
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-        else
-          git commit -m "chore: add Playwright setup"
-          git push
-        fi
+        git diff --staged --quiet || git commit -am "🎭 Add Playwright setup"
+        git push
