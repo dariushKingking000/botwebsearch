@@ -1,63 +1,74 @@
-name: 🖥️ Interactive Terminal
-on:
-  workflow_dispatch:  # دکمه Run workflow
-  push:
-    branches: [ main ]
+name: 🎭 Playwright + Selenium Setup
+on: [workflow_dispatch]
 
 jobs:
-  terminal:
+  setup:
     runs-on: ubuntu-latest
     steps:
-    # 1. Checkout کد
     - uses: actions/checkout@v4
     
-    # 2. نصب tmux
-    - name: 📦 Install tmux & tools
+    # 1. Node.js + Python
+    - uses: actions/setup-node@v4
+      with: { node-version: '20' }
+    - uses: actions/setup-python@v5
+      with: { python-version: '3.11' }
+    
+    # 2. نصب Playwright
+    - name: 🎭 Install Playwright
       run: |
-        sudo apt-get update -y
-        sudo apt-get install -y tmux tree
+        npm init -y
+        npm install --save-dev @playwright/test
+        npx playwright install --with-deps
+        npx playwright --version
         
-    # 3. شروع Terminal Session
-    - name: 🚀 Start Terminal Session
+    # 3. نصب Selenium
+    - name: 🐍 Install Selenium
       run: |
-        # ایجاد session جدید
-        tmux new-session -d -s devterm -c "$PWD"
+        pip install selenium webdriver-manager
+        python3 -c "import selenium; print(f'Selenium: {selenium.__version__}')"
         
-        # خوش‌آمدگویی
-        tmux send-keys -t devterm "clear && echo '🖥️  GitHub Terminal آماده!' && echo '📂 مسیر: $(pwd)'" C-m
-        tmux send-keys -t devterm "echo '📋 فایل‌ها:' && ls -la" C-m
-        
-        # Split به 2 پنل
-        tmux split-window -h -c "$PWD"
-        
-    # 4. اجرای دستورات اصلی
-    - name: ⚙️ Run Your Commands
+    # 4. تست سریع
+    - name: 🧪 Quick Test
       run: |
-        # پنل چپ: Git & Build
-        tmux send-keys -t devterm:0.0 "echo '🔧 Git Status:' && git status" C-m
-        tmux send-keys -t devterm:0.0 "echo '📦 Dependencies:' && npm install || echo 'npm not found'" C-m
-        tmux send-keys -t devterm:0.0 "echo '🚀 Build:' && npm run build || echo 'No build script'" C-m
+        echo "✅ Playwright browsers:"
+        npx playwright install chromium
+        ls -la node_modules/.bin/
         
-        # پنل راست: Test & Preview  
-        tmux send-keys -t devterm:0.1 "echo '✅ Tests:' && npm test || echo 'No tests'" C-m
-        tmux send-keys -t devterm:0.1 "echo '🌳 Tree:' && tree -L 2 || ls -R" C-m
+        echo "✅ Selenium drivers:"
+        python3 -c "
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+print('Selenium + ChromeDriver OK!')
+"
         
-        sleep 3
-        
-    # 5. نمایش خروجی کامل
-    - name: 📺 Show Terminal Output
+    # 5. نسخه‌ها در Log
+    - name: 📋 Show All Versions
       run: |
-        echo '## 🎬 خروجی Terminal (پنل چپ):'
-        tmux capture-pane -t devterm:0.0 -p
-        echo '---'
-        echo '## 🎬 خروجی Terminal (پنل راست):'  
-        tmux capture-pane -t devterm:0.1 -p
+        echo '## 🚀 نسخه‌ها:'
+        echo '| Tool | Version |'
+        echo '|------|---------|'
+        echo "| Node | $(node --version) |"
+        echo "| Python | $(python3 --version) |"
+        echo "| Playwright | $(npx playwright --version) |"
+        echo "| Selenium | $(python3 -c 'import selenium; print(selenium.__version__)') |"
         
-        # ذخیره لاگ
-        tmux capture-pane -t devterm -p > terminal-log.txt
-        cat terminal-log.txt
+    # 6. نمونه تست
+    - name: 🎯 Sample Test File
+      run: |
+        cat > test-playwright.js << 'EOF'
+        const { test, expect } = require('@playwright/test');
+        test('GitHub', async ({ page }) => {
+          await page.goto('https://github.com');
+          expect(await page.title()).toBe('GitHub');
+        });
+        EOF
         
-    # 6. Cleanup
-    - name: 🧹 Cleanup
-      if: always()
-      run: tmux kill-session -t devterm || true
+        cat > test-selenium.py << 'EOF'
+        from selenium import webdriver
+        from selenium.webdriver.common.by import By
+        driver = webdriver.Chrome()
+        driver.get("https://github.com")
+        print("Title:", driver.title)
+        driver.quit()
+        EOF
