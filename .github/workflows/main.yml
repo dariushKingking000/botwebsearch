@@ -1,34 +1,63 @@
-name: Interactive Terminal
-on: [workflow_dispatch]
+name: 🖥️ Interactive Terminal
+on:
+  workflow_dispatch:  # دکمه Run workflow
+  push:
+    branches: [ main ]
 
 jobs:
   terminal:
     runs-on: ubuntu-latest
     steps:
+    # 1. Checkout کد
     - uses: actions/checkout@v4
     
-    - name: Install tmux
+    # 2. نصب tmux
+    - name: 📦 Install tmux & tools
       run: |
-        sudo apt-get update
-        sudo apt-get install -y tmux
-    
-    - name: Start tmux session
-      run: |
-        tmux new-session -d -s myterm
-        tmux send-keys -t myterm "echo '🖥️  Terminal آماده است! دستورات بزن:'" C-m
-        tmux send-keys -t myterm "echo '📁 pwd: $(pwd)'" C-m
-        tmux send-keys -t myterm "echo '📦 ls -la'" C-m
-        tmux send-keys -t myterm "ls -la" C-m
+        sudo apt-get update -y
+        sudo apt-get install -y tmux tree
         
-    - name: Show terminal output
+    # 3. شروع Terminal Session
+    - name: 🚀 Start Terminal Session
       run: |
-        echo '### خروجی Terminal:'
-        tmux capture-pane -t myterm -p
+        # ایجاد session جدید
+        tmux new-session -d -s devterm -c "$PWD"
         
-    - name: Interactive shell commands
+        # خوش‌آمدگویی
+        tmux send-keys -t devterm "clear && echo '🖥️  GitHub Terminal آماده!' && echo '📂 مسیر: $(pwd)'" C-m
+        tmux send-keys -t devterm "echo '📋 فایل‌ها:' && ls -la" C-m
+        
+        # Split به 2 پنل
+        tmux split-window -h -c "$PWD"
+        
+    # 4. اجرای دستورات اصلی
+    - name: ⚙️ Run Your Commands
       run: |
-        echo '🔧 اجرای دستورات سفارشی...'
-        tmux send-keys -t myterm "npm install" C-m  # مثال
-        tmux send-keys -t myterm "npm run build" C-m
-        sleep 5
-        tmux capture-pane -t myterm -p
+        # پنل چپ: Git & Build
+        tmux send-keys -t devterm:0.0 "echo '🔧 Git Status:' && git status" C-m
+        tmux send-keys -t devterm:0.0 "echo '📦 Dependencies:' && npm install || echo 'npm not found'" C-m
+        tmux send-keys -t devterm:0.0 "echo '🚀 Build:' && npm run build || echo 'No build script'" C-m
+        
+        # پنل راست: Test & Preview  
+        tmux send-keys -t devterm:0.1 "echo '✅ Tests:' && npm test || echo 'No tests'" C-m
+        tmux send-keys -t devterm:0.1 "echo '🌳 Tree:' && tree -L 2 || ls -R" C-m
+        
+        sleep 3
+        
+    # 5. نمایش خروجی کامل
+    - name: 📺 Show Terminal Output
+      run: |
+        echo '## 🎬 خروجی Terminal (پنل چپ):'
+        tmux capture-pane -t devterm:0.0 -p
+        echo '---'
+        echo '## 🎬 خروجی Terminal (پنل راست):'  
+        tmux capture-pane -t devterm:0.1 -p
+        
+        # ذخیره لاگ
+        tmux capture-pane -t devterm -p > terminal-log.txt
+        cat terminal-log.txt
+        
+    # 6. Cleanup
+    - name: 🧹 Cleanup
+      if: always()
+      run: tmux kill-session -t devterm || true
