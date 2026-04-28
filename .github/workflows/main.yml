@@ -1,9 +1,9 @@
-name: Download and Commit GH CLI Installer
+name: Download and Commit OpenSSH Installer
 
 on:
   push:
     branches:
-      - main # یا شاخه‌ای که می‌خواهید workflow روی آن اجرا شود
+      - main
 
 jobs:
   download_and_commit:
@@ -12,12 +12,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Download GH CLI installer
+      - name: Download OpenSSH installer
         run: |
-          DOWNLOAD_URL="https://github.com/cli/cli/releases/download/v2.91.0/gh_2.91.0_windows_amd64.msi"
-          FILE_NAME="gh_2.91.0_windows_amd64.msi" # نام فایل خروجی
+          DOWNLOAD_URL="https://github.com/PowerShell/Win32-OpenSSH/releases/download/10.0.0.0p2-Preview/OpenSSH-Win64-v10.0.0.0.msi"
+          FILE_NAME="OpenSSH-Win64-v10.0.0.0.msi"
           curl -L $DOWNLOAD_URL -o $FILE_NAME
-          echo "GH CLI installer downloaded successfully."
+          echo "OpenSSH installer downloaded successfully."
 
       - name: Commit and push installer
         env:
@@ -25,12 +25,11 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add gh_2.91.0_windows_amd64.msi
-          # بررسی کنید که آیا تغییری برای commit وجود دارد
+          git add OpenSSH-Win64-v10.0.0.0.msi
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Add GH CLI installer v2.91.0"
+            git commit -m "Add OpenSSH Win64 v10.0.0.0 (10.0.0.0p2-Preview)"
             git push
-            echo "GH CLI installer committed and pushed successfully."
+            echo "OpenSSH installer committed and pushed successfully."
           fi
