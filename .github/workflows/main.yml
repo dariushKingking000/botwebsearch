@@ -1,17 +1,15 @@
-name: Deploy Preview
+name: Live Link
 on: [push]
 
 jobs:
-  preview:
+  deploy:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     
-    - name: Deploy to Surge
-      uses: dswistowski/surge-preview@v1
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        surge_login: ${{ secrets.SURGE_LOGIN }}
-        surge_token: ${{ secrets.SURGE_TOKEN }}
-        surge_project: './'
-        surge_domain: 'dariush-bot-${{ github.sha }}.surge.sh'
+        publish_dir: ./
+        force_orphan: true
