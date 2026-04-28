@@ -1,7 +1,22 @@
-- name: Serve with Python
+name: Serve Localhost
+on: [push, pull_request]  # خط 2 درست است!
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    
+    - name: Install
+      run: npm ci
+    
+    - name: Test Server
       run: |
-        python3 -m http.server 3000 &
-        SERVER_PID=$!
-        sleep 3
+        npm start &  # اپت رو start کن
+        sleep 5
         curl -f http://localhost:3000
-        kill $SERVER_PID
