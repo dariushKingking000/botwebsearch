@@ -1,28 +1,34 @@
-name: 🚀 Codespace Auto Deploy
-on: [push, workflow_dispatch]
+name: Interactive Terminal
+on: [workflow_dispatch]
 
 jobs:
-  deploy:
+  terminal:
     runs-on: ubuntu-latest
     steps:
-    - name: 🔧 Setup SSH Key
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.CODESPACES_SSH_KEY }}" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan -H ${{ secrets.CODESPACES_HOST }} >> ~/.ssh/known_hosts
+    - uses: actions/checkout@v4
     
-    - name: 🚀 Deploy to Codespace
+    - name: Install tmux
       run: |
-        ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_ed25519 vscode@${{ secrets.CODESPACES_HOST }} "
-          cd /workspaces/botwebsearch || git clone https://github.com/dariushKingking000/botwebsearch /workspaces/botwebsearch &&
-          cd /workspaces/botwebsearch &&
-          git pull origin main &&
-          npm ci --production &&
-          pkill -f 'npm start' || true &&
-          sleep 2 &&
-          nohup npm start > app.log 2>&1 & &&
-          sleep 5 &&
-          echo '✅ Status:' &&
-          pgrep -f 'npm start' && tail -15 app.log || echo '❌ Failed'
-        "
+        sudo apt-get update
+        sudo apt-get install -y tmux
+    
+    - name: Start tmux session
+      run: |
+        tmux new-session -d -s myterm
+        tmux send-keys -t myterm "echo '🖥️  Terminal آماده است! دستورات بزن:'" C-m
+        tmux send-keys -t myterm "echo '📁 pwd: $(pwd)'" C-m
+        tmux send-keys -t myterm "echo '📦 ls -la'" C-m
+        tmux send-keys -t myterm "ls -la" C-m
+        
+    - name: Show terminal output
+      run: |
+        echo '### خروجی Terminal:'
+        tmux capture-pane -t myterm -p
+        
+    - name: Interactive shell commands
+      run: |
+        echo '🔧 اجرای دستورات سفارشی...'
+        tmux send-keys -t myterm "npm install" C-m  # مثال
+        tmux send-keys -t myterm "npm run build" C-m
+        sleep 5
+        tmux capture-pane -t myterm -p
