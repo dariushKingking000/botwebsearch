@@ -1,52 +1,45 @@
-name: 🚀 Codespace Deploy + SSH Setup
+name: Check or Create SSH Config
+
 on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch:  # اجرا به صورت دستی از تب Actions
 
 jobs:
-  setup-deploy:
+  ssh-config-check:
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v4
-    
-    # 🔧 Setup SSH + authorized_keys
-    - name: 🔑 Setup SSH & Authorized Keys
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: fictional-space-acorn-pj44pjq75j7526jwj-44334.app.github.dev
-        username: vscode
-        key: ${{ secrets.CODESPACES_SSH_KEY }}
-        port: 22
-        script: |
-          # SSH config (یکبار)
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          
-          # GitHub Actions public key
-          echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKgj81hDQdb17CcsPTYyRKiShTrzYyAXP98MyKt+IM9/ github-actions" >> ~/.ssh/authorized_keys
-          chmod 600 ~/.ssh/authorized_keys
-          
-          sudo service ssh restart || true
-          echo "✅ SSH Config Complete!"
-    
-    # 🚀 Deploy
-    - name: 🚀 Deploy App
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: fictional-space-acorn-pj44pjq75j7526jwj-44334.app.github.dev
-        username: vscode
-        key: ${{ secrets.CODESPACES_SSH_KEY }}
-        port: 22
-        script: |
-          cd /workspaces/botwebsearch
-          git pull origin main || true
-          
-          # پروژه‌ت رو فعال کن:
-          npm install
-          npm run build
-          pkill node || true
-          nohup npm start > app.log 2>&1 &
-          
-          echo "✅ Deployed! Logs:"
-          tail -10 app.log
+      - name: Check if SSH config exists
+        run: |
+          echo "🔍 Checking for SSH config at $HOME/.ssh/config ..."
+
+          if [ -f "$HOME/.ssh/config" ]; then
+            echo "✅ SSH config already exists!"
+            echo "---- Existing config ----"
+            cat "$HOME/.ssh/config"
+            echo "-------------------------"
+          else
+            echo "⚠️ No SSH config found. Creating a new one..."
+            mkdir -p "$HOME/.ssh"
+
+            cat << 'EOF' > "$HOME/.ssh/config"
+Host github-codespace
+    HostName YOUR-CODESPACE-ID.github.dev
+    User codespace
+    IdentityFile ~/.ssh/id_ed25519
+    ServerAliveInterval 60
+    ServerAliveCountMax 6
+    ControlMaster auto
+    ControlPath ~/.ssh/cm-%r@%h:%p
+    ControlPersist yes
+EOF
+
+            chmod 600 "$HOME/.ssh/config"
+
+            echo "✅ Created SSH config successfully."
+            echo "---- New config ----"
+            cat "$HOME/.ssh/config"
+            echo "--------------------"
+          fi
+
+      - name: Finish
+        run: echo "🎉 SSH config check complete!"
