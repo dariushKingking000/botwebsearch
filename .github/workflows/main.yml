@@ -77,3 +77,6 @@ jobs:
         git add .
         git commit -m "Add Playwright + Selenium setup" || echo "No changes"
         git push
+        git add auto-setup.yml  
+        git commit -m "Auto setup"
+        git push origin main
