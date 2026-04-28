@@ -1,46 +1,7 @@
-name: 🚀 Auto Playwright NO Terminal
-on:
-  workflow_dispatch:
-
-jobs:
-  deploy-playwright:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-      
-    - name: Create ALL Playwright files
+- name: Serve with Python
       run: |
-        # package.json
-        cat > package.json << EOF
-        {
-          "devDependencies": {
-            "@playwright/test": "^1.47.0"
-          },
-          "scripts": {
-            "playwright:install": "playwright install --with-deps"
-          }
-        }
-        EOF
-        
-        # playwright.config.ts  
-        cat > playwright.config.ts << EOF
-        import { defineConfig } from '@playwright/test';
-        export default defineConfig({});
-        EOF
-        
-        # .devcontainer setup
-        mkdir -p .devcontainer
-        cat > .devcontainer/devcontainer.json << EOF
-        {
-          "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
-          "postCreateCommand": "npm i @playwright/test && npx playwright install --with-deps"
-        }
-        EOF
-    
-    - name: Commit & Push
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "Auto-Setup"
-        git add .
-        git commit -m "🚀 Playwright: Full auto setup (no terminal needed)" || exit 0
-        git push
+        python3 -m http.server 3000 &
+        SERVER_PID=$!
+        sleep 3
+        curl -f http://localhost:3000
+        kill $SERVER_PID
