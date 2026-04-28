@@ -10,37 +10,50 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    # 🔧 SSH Setup
-    - name: 🔑 Setup SSH
+    # 🔧 SSH + Health Check
+    - name: 🔑 Setup & Test SSH
       uses: appleboy/ssh-action@v1.0.3
+      timeout-minutes: 5
       with:
-        host: fictional-space-acorn-pj44pjq75j7526jwj.github.dev
+        host: fantastic-spark-g4jj74wxv55j3w9v7.github.dev
         username: vscode
         key: ${{ secrets.CODESPACES_SSH_KEY }}
         port: 22
+        script_stop: true
         script: |
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
           echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKgj81hDQdb17CcsPTYyRKiShTrzYyAXP98MyKt+IM9/ github-actions" >> ~/.ssh/authorized_keys
           chmod 600 ~/.ssh/authorized_keys
           sudo service ssh restart || true
-          echo "✅ SSH Ready!"
+          echo "✅ SSH Active | Uptime: $(uptime)"
     
-    # 🚀 Deploy
+    # 🚀 Deploy + Restart
     - name: 🚀 Deploy App
       uses: appleboy/ssh-action@v1.0.3
       with:
-        host: fictional-space-acorn-pj44pjq75j7526jwj.github.dev
+        host: fantastic-spark-g4jj74wxv55j3w9v7.github.dev
         username: vscode
         key: ${{ secrets.CODESPACES_SSH_KEY }}
         port: 22
         script: |
-          cd /workspaces/botwebsearch || echo "❌ No project folder"
-          pwd && ls -la
+          cd /workspaces/botwebsearch || (git clone https://github.com/dariushKingking000/botwebsearch /workspaces/botwebsearch && cd /workspaces/botwebsearch)
           
-          git pull origin main || git clone https://github.com/dariushKingking000/botwebsearch .
-          npm install
-          pkill node || true
+          git pull origin main
+          npm ci --production
+          
+          pkill -f "npm start" || true
+          sleep 2
+          
           nohup npm start > app.log 2>&1 &
-          sleep 3
-          echo "✅ Deployed! Logs:"
-          tail -10 app.log
+          sleep 5
+          
+          if pgrep -f "npm start"; then
+            echo "✅ Deployed! PID: $(pgrep -f 'npm start')"
+            echo "📊 Logs:"
+            tail -15 app.log
+            curl -s localhost:3000 || echo "⚠️  Port check failed"
+          else
+            echo "❌ App failed to start"
+            tail -20 app.log
+            exit 1
+          fi
