@@ -1,74 +1,79 @@
-name: 🎭 Playwright + Selenium Setup
+name: 🎭 Complete Playwright + Selenium
 on: [workflow_dispatch]
 
 jobs:
   setup:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    # 1. Node.js + Python
-    - uses: actions/setup-node@v4
-      with: { node-version: '20' }
-    - uses: actions/setup-python@v5
-      with: { python-version: '3.11' }
-    
-    # 2. نصب Playwright
+    - name: 📥 Checkout
+      uses: actions/checkout@v4
+      
+    - name: 🛠️ Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v5
+      with:
+        node-version: '3.11'
+        
     - name: 🎭 Install Playwright
       run: |
         npm init -y
-        npm install --save-dev @playwright/test
-        npx playwright install --with-deps
-        npx playwright --version
+        npm install @playwright/test
+        npx playwright install --with-deps chromium
+        echo "✅ Playwright version: $(npx playwright --version)"
         
-    # 3. نصب Selenium
     - name: 🐍 Install Selenium
       run: |
-        pip install selenium webdriver-manager
-        python3 -c "import selenium; print(f'Selenium: {selenium.__version__}')"
+        pip install selenium==4.25.0 webdriver-manager
+        python -c "import selenium; print('✅ Selenium:', selenium.__version__)"
         
-    # 4. تست سریع
-    - name: 🧪 Quick Test
+    - name: 📊 Show Versions
       run: |
-        echo "✅ Playwright browsers:"
-        npx playwright install chromium
-        ls -la node_modules/.bin/
+        echo "Node: $(node --version)"
+        echo "Python: $(python --version)"
+        echo "npm: $(npm --version)"
+        ls -la node_modules/.bin/ | grep playwright
+        npx playwright --version
+        python -c "import selenium; print(selenium.__version__)"
         
-        echo "✅ Selenium drivers:"
-        python3 -c "
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-print('Selenium + ChromeDriver OK!')
-"
-        
-    # 5. نسخه‌ها در Log
-    - name: 📋 Show All Versions
+    - name: 📄 Create Test Files
       run: |
-        echo '## 🚀 نسخه‌ها:'
-        echo '| Tool | Version |'
-        echo '|------|---------|'
-        echo "| Node | $(node --version) |"
-        echo "| Python | $(python3 --version) |"
-        echo "| Playwright | $(npx playwright --version) |"
-        echo "| Selenium | $(python3 -c 'import selenium; print(selenium.__version__)') |"
-        
-    # 6. نمونه تست
-    - name: 🎯 Sample Test File
-      run: |
-        cat > test-playwright.js << 'EOF'
+        cat > playwright-test.js << 'EOF'
         const { test, expect } = require('@playwright/test');
-        test('GitHub', async ({ page }) => {
+        test('GitHub Test', async ({ page }) => {
           await page.goto('https://github.com');
-          expect(await page.title()).toBe('GitHub');
+          await expect(page).toHaveTitle(/GitHub/);
+          console.log('✅ Playwright OK!');
         });
         EOF
         
-        cat > test-selenium.py << 'EOF'
+        cat > selenium-test.py << 'EOF'
         from selenium import webdriver
-        from selenium.webdriver.common.by import By
-        driver = webdriver.Chrome()
+        from selenium.webdriver.chrome.service import Service
+        from webdriver_manager.chrome import ChromeDriverManager
+        
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service)
         driver.get("https://github.com")
-        print("Title:", driver.title)
+        print(f"✅ Selenium OK! Title: {driver.title}")
         driver.quit()
         EOF
+        
+    - name: 🚀 Run Tests
+      run: |
+        echo "🎭 Playwright Test:"
+        npx playwright test playwright-test.js
+        
+        echo "🐍 Selenium Test:"
+        python selenium-test.py
+        
+    - name: 💾 Push Changes
+      run: |
+        git config user.name "GitHub Action"
+        git config user.email "action@github.com"
+        git add .
+        git commit -m "Add Playwright + Selenium setup" || echo "No changes"
+        git push
