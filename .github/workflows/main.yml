@@ -1,10 +1,10 @@
-name: Screenshot
+name: Click Coordinates
 on: [push]
 permissions:
   contents: write
 
 jobs:
-  screenshot:
+  click:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -12,67 +12,67 @@ jobs:
     
     - uses: browser-actions/setup-chrome@v1
     
-    - name: Screenshot
+    - name: Click X,Y
       run: |
         npm init -y
-        npm i puppeteer@latest
-        cat > screenshot.js << 'EOF'
+        npm i puppeteer
+        cat > click.js << 'EOF'
         const puppeteer = require('puppeteer');
         const fs = require('fs');
         
-        // JSON config
+        // مختصات کلیک (134, 254)
         const config = {
           url: 'https://app.n8n.cloud/register',
-          width: 1920,
-          height: 1080,
+          x: 564,
+          y: 264,
           timestamp: new Date().toISOString()
         };
-        
         fs.writeFileSync('config.json', JSON.stringify(config, null, 2));
         
         (async () => {
-          console.log('🚀 Starting browser...');
-          const browser = await puppeteer.launch({
-            headless: 'new',
-            args: [
-              '--no-sandbox',
-              '--disable-setuid-sandbox',
-              '--disable-dev-shm-usage',
-              '--disable-accelerated-2d-canvas',
-              '--no-first-run',
-              '--no-zygote'
-            ]
-          });
-          
+          const browser = await puppeteer.launch({headless: true, args: ['--no-sandbox']});
           const page = await browser.newPage();
-          await page.setViewport({width: config.width, height: config.height});
+          await page.setViewport({width: 1920, height: 1080});
+          await page.goto(config.url, {waitUntil: 'networkidle2', timeout: 20000});
           
-          console.log(`📱 Navigating to ${config.url}...`);
-          await page.goto(config.url, { 
-            waitUntil: 'networkidle2', 
-            timeout: 30000 
-          });
+          // 📸 قبل از کلیک
+          await page.screenshot({path: 'before-click.png', fullPage: true});
           
-          console.log('📸 Taking screenshot...');
-          await page.screenshot({ 
-            path: 'screenshot.png', 
-            fullPage: true 
-          });
+          // 🖱️ کلیک دقیق X,Y
+          await page.mouse.click(config.x, config.y);
           
+          // 🔴 کوچکترین دایره ممکن
+          await page.evaluate((x, y) => {
+            const circle = document.createElement('div');
+            circle.style.position = 'fixed';
+            circle.style.left = (x - 2) + 'px';
+            circle.style.top = (y - 2) + 'px';
+            circle.style.width = '4px';
+            circle.style.height = '4px';
+            circle.style.backgroundColor = 'red';
+            circle.style.borderRadius = '50%';
+            circle.style.border = '1px solid white';
+            circle.style.pointerEvents = 'none';
+            circle.style.zIndex = '99999';
+            document.body.appendChild(circle);
+          }, config.x, config.y);
+          
+          console.log(`✅ Clicked at (${config.x}, ${config.y})`);
+          
+          // 📸 بعد از کلیک + دایره
+          await page.screenshot({path: 'after-click.png', fullPage: true});
           await browser.close();
-          console.log('✅ Screenshot & config.json saved!');
-        })().catch((error) => {
-          console.error('❌ Error:', error);
+        })().catch(e => {
+          console.error('❌ Error:', e.message);
           process.exit(1);
         });
         EOF
-        
-        node screenshot.js
+        node click.js
     
-    - name: Commit & Push
+    - name: Commit
       run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git add screenshot.png config.json
-        git commit -m "📸 Screenshot updated $(date '+%Y-%m-%d %H:%M') [skip ci]" || echo "No changes to commit"
-        git push || echo "No changes to push"
+        git config user.name "github-actions"
+        git config user.email "actions@github.com"
+        git add *.png config.json
+        git commit -m "🎯 Click (134,254) [skip ci]" || exit 0
+        git push || exit 0
