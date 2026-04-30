@@ -22,7 +22,7 @@ jobs:
         
         // JSON config بساز/بروزرسانی
         const config = {
-          url: 'https://temp-mail.org/en',
+          url: 'http://10minutemail.com',
           width: 1920,
           height: 1080,
           timestamp: new Date().toISOString()
