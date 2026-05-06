@@ -1,1 +1,3 @@
-type 762266
+click 101,883
+click 333,696
+click 875,318
