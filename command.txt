@@ -1,2 +1,4 @@
-click 1351,277
-click 1330,518
+type l
+type l
+type l
+type l
