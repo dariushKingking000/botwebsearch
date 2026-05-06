@@ -1,4 +1,2 @@
-type l
-type l
-type l
-type l
+click 1351,277
+click 1167,396
