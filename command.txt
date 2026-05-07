@@ -1,1 +1,2 @@
-copy
+click 78,336
+click 300,292
