@@ -1,1 +1,1 @@
-type kingking
+click 1193,367
