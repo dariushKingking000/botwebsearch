@@ -16,7 +16,7 @@ jobs:
     - name: Install Chrome + FFmpeg
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget gnupg xvfb x11-xkb-utils ffmpeg
+        sudo apt-get install -y wget gnupg xvfb x11-xkb-utils ffmpeg bc
         wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
         echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
         sudo apt-get update
@@ -79,10 +79,11 @@ jobs:
         
         async function takeScreenshot() {
           console.log("📸 Screenshot...");
-          await page.screenshot({ path: 'screenshot.png', type: 'png' });
+          await page.screenshot({ path: 'screenshot.png', fullPage: false, type: 'png' });
           await page.screenshot({ path: 'screenshot-full.png', fullPage: true, type: 'png' });
-          const buffer = await page.screenshot({ type: 'png' });
+          const buffer = await page.screenshot({ type: 'png', fullPage: true });
           fs.writeFileSync("screenshot-base64.txt", buffer.toString('base64'));
+          console.log("✅ Screenshot OK!");
         }
         
         async function copyPageText() {
@@ -131,7 +132,7 @@ jobs:
           
           const fps = 10;
           const cmdCount = commands.length;
-          const delayPerCmd = cmdCount === 4 ? 8000 : cmdCount === 3 ? 10000 : cmdCount === 2 ? 15000 : 30000;
+          const delayPerCmd = cmdCount >= 7 ? 20000 : cmdCount >= 4 ? 15000 : cmdCount === 3 ? 12000 : cmdCount === 2 ? 18000 : 30000;
           const uniqueId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
           
           console.log(`📊 ${cmdCount} دستور - هر کدام ${delayPerCmd/1000}s - ID: ${uniqueId}`);
@@ -141,32 +142,40 @@ jobs:
           for(let cmdIndex = 0; cmdIndex < cmdCount; cmdIndex++) {
             const cmd = commands[cmdIndex];
             
-            const preFrames = Math.floor((delayPerCmd / 3) / 1000);
+            // Pre frames
+            const preFrames = Math.floor((delayPerCmd / 4) / 1000);
             for(let i = 0; i < preFrames; i++) {
               await page.screenshot({ path: `frames/frame_${uniqueId}_${frameIndex.toString().padStart(6,'0')}.png` });
-              console.log(`📸 frame_${uniqueId}_${frameIndex.toString().padStart(6,'0')}.png`);
               frameIndex++;
               await wait(1000);
             }
             
             await executeCommand(cmd);
             
-            const postFrames = Math.floor((delayPerCmd * 2 / 3) / 1000);
+            // Post frames
+            const postFrames = Math.floor((delayPerCmd * 3 / 4) / 1000);
             for(let i = 0; i < postFrames; i++) {
               await page.screenshot({ path: `frames/frame_${uniqueId}_${frameIndex.toString().padStart(6,'0')}.png` });
-              console.log(`📸 frame_${uniqueId}_${frameIndex.toString().padStart(6,'0')}.png`);
               frameIndex++;
               await wait(1000);
             }
           }
           
+          // FINAL screenshot قبل از پاک کردن frames
+          await takeScreenshot();
+          
           const output = `video_${uniqueId}.mp4`;
           try {
-            execSync(`ffmpeg -y -r ${fps} -i frames/frame_${uniqueId}_%06d.png -c:v libx264 -pix_fmt yuv420p -crf 23 -preset fast ${output}`, { timeout: 45000 });
-            console.log(`✅ Video ${frameIndex} frames: ${fs.statSync(output).size / 1024 / 1024}MB`);
-            fs.rmSync('frames', { recursive: true, force: true });
+            execSync(`ffmpeg -y -r ${fps} -i frames/frame_${uniqueId}_%06d.png -c:v libx264 -pix_fmt yuv420p -crf 18 -preset medium ${output}`, { timeout: 60000 });
+            const stats = fs.statSync(output);
+            console.log(`✅ Video ${frameIndex} frames: ${Math.round(stats.size / 1024 / 1024 * 100) / 100}MB`);
           } catch(e) {
             console.error("❌ FFmpeg:", e.message);
+          }
+          
+          // frames رو آخر پاک کن
+          if (fs.existsSync('frames')) {
+            fs.rmSync('frames', { recursive: true, force: true });
           }
         }
         
@@ -188,10 +197,9 @@ jobs:
                   .map(line => line.trim())
                   .filter(line => line && (line.startsWith('click ') || line.startsWith('type ') || line === 'enter' || line === 'copy'));
                 
-                console.log(`📝 ${commands.length} دستور پیدا شد`);
+                console.log(`📝 ${commands.length} دستور پیدا شد: ${commands.join(', ')}`);
                 
                 await recordVideoWithActions(commands);
-                await takeScreenshot();
                 
                 fs.writeFileSync('response.txt', `✅ ${commands.length} دستور OK!`);
                 fs.unlinkSync('command_pipe.txt');
@@ -215,8 +223,9 @@ jobs:
         
         git config user.name "Screenshot Bot"
         git config user.email "bot@github.com"
+        git config --global core.filemode false
         
-        rm -f last_command.txt command_pipe.txt response.txt page-text.txt
+        rm -f last_command.txt command_pipe.txt response.txt page-text.txt screenshot*.png video*.mp4 screenshot-base64.txt
         
         timeout 7200 node bot.js &
         BOT_PID=$!
@@ -224,7 +233,7 @@ jobs:
         sleep 45
         
         while true; do
-          git pull origin main --force || true
+          git pull origin main --ff-only || git reset --hard origin/main
           
           if [ -f command.txt ]; then
             CONTENT=$(cat command.txt)
@@ -232,10 +241,10 @@ jobs:
             
             if [ "$CONTENT" != "exit" ] && [ "$CONTENT" != "$LAST_CMD" ]; then
               echo "🆕 $CONTENT"
-              rm -f command_pipe.txt response.txt page-text.txt
+              rm -f command_pipe.txt response.txt page-text.txt screenshot*.png video*.mp4 screenshot-base64.txt
               echo "$CONTENT" > command_pipe.txt
               
-              for i in {1..300}; do
+              for i in {1..360}; do
                 if [ -f response.txt ]; then
                   cat response.txt
                   rm -f response.txt command_pipe.txt
@@ -244,24 +253,31 @@ jobs:
                 sleep 1
               done
               
-              # لیست فایل‌ها
-              for f in screenshot-full.png video*.mp4 page-text.txt; do
+              # چک کردن فایل‌های تولید شده
+              HAS_FILES=false
+              for f in screenshot-full.png screenshot.png screenshot-base64.txt video_*.mp4 page-text.txt; do
                 if [ -f "$f" ]; then
-                  SIZE=$(stat -c %s "$f")
-                  MB=$(echo "scale=1; $SIZE/1024/1024" | bc)
+                  SIZE=$(stat -c %s "$f" 2>/dev/null || echo 0)
+                  MB=$(echo "scale=2; $SIZE/1024/1024" | bc -l 2>/dev/null || echo "0.00")
                   echo "📁 $f: ${MB}MB"
+                  HAS_FILES=true
                 fi
               done
               
-              # فقط فایل‌های موجود را add کن
-              git add -f screenshot*.png screenshot-base64.txt video*.mp4 page-text.txt bot.js .gitignore 2>/dev/null || true
-              
-              if ! git diff --staged --quiet; then
-                git commit -m "🎥 Multi-Commands + Video$( [ -f page-text.txt ] && echo ' + Text' ) | $(date +'%Y-%m-%d %H:%M')" || true
-                git push origin main -f || true
-                echo "✅ Push!"
+              if [ "$HAS_FILES" = true ]; then
+                echo "📤 Git add همه فایل‌ها..."
+                git add screenshot*.png screenshot-base64.txt video*.mp4 page-text.txt bot.js .gitignore 2>/dev/null || true
+                
+                if ! git diff --staged --quiet; then
+                  git commit -m "🎥 $(ls video_*.mp4 2>/dev/null | tail -1 | xargs basename 2>/dev/null || echo 'Video') + Screenshot | $(date +'%Y-%m-%d %H:%M')" || true
+                  echo "🚀 Push..."
+                  git push origin main --force || git push origin main
+                  echo "✅ PUSH موفق!"
+                else
+                  echo "ℹ️ تغییری نبود"
+                fi
               else
-                echo "ℹ️ تغییری نبود"
+                echo "⚠️ هیچ فایلی تولید نشد!"
               fi
               
               echo "$CONTENT" > last_command.txt
