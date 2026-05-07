@@ -1,4 +1,4 @@
-click 1042,574
+click 1042,573
 click 858,221
 click 888,286
 type dariushKingking000
