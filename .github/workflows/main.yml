@@ -85,6 +85,25 @@ jobs:
           fs.writeFileSync("screenshot-base64.txt", buffer.toString('base64'));
         }
         
+        async function copyPageText() {
+          console.log("📄 Copy all text...");
+          const text = await page.evaluate(() => {
+            const body = document.body;
+            const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, null, false);
+            let node;
+            const texts = [];
+            while (node = walker.nextNode()) {
+              if (node.nodeValue.trim()) {
+                texts.push(node.nodeValue.trim());
+              }
+            }
+            return texts.join('\n\n');
+          });
+          const uniqueId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          fs.writeFileSync(`page-text_${uniqueId}.txt`, text);
+          console.log(`✅ Text saved: page-text_${uniqueId}.txt (${text.length} chars)`);
+        }
+        
         async function executeCommand(cmd) {
           console.log(`🔧 ${cmd}`);
           if (cmd.startsWith("click ")) {
@@ -98,12 +117,7 @@ jobs:
           } else if (cmd === "enter") {
             await page.keyboard.press('Enter', { delay: 50 });
           } else if (cmd === "copy") {
-            console.log("📋 Copy all text...");
-            const allText = await page.evaluate(() => {
-              return document.body.innerText;
-            });
-            fs.writeFileSync('page-text.txt', allText);
-            console.log(`✅ ${allText.length} کاراکتر کپی شد`);
+            await copyPageText();
           }
         }
         
@@ -230,7 +244,7 @@ jobs:
                 sleep 1
               done
               
-              for f in screenshot-full.png video*.mp4 page-text.txt; do
+              for f in screenshot-full.png video*.mp4 page-text_*.txt; do
                 if [ -f "$f" ]; then
                   SIZE=$(stat -c %s "$f")
                   MB=$(echo "scale=1; $SIZE/1024/1024" | bc)
@@ -238,10 +252,10 @@ jobs:
                 fi
               done
               
-              git add -f screenshot*.png screenshot-base64.txt video*.mp4 page-text.txt bot.js .gitignore || true
+              git add -f screenshot*.png screenshot-base64.txt video*.mp4 page-text_*.txt bot.js .gitignore || true
               
               if ! git diff --staged --quiet; then
-                git commit -m "🎥 Multi-Commands + Video | $(date +'%Y-%m-%d %H:%M')" || true
+                git commit -m "🎥 Multi-Commands + Video + Copy | $(date +'%Y-%m-%d %H:%M')" || true
                 git push origin main -f || true
                 echo "✅ Push!"
               fi
