@@ -97,6 +97,13 @@ jobs:
             await page.keyboard.type(text, { delay: 80 });
           } else if (cmd === "enter") {
             await page.keyboard.press('Enter', { delay: 50 });
+          } else if (cmd === "copy") {
+            console.log("📋 Copy all text...");
+            const allText = await page.evaluate(() => {
+              return document.body.innerText;
+            });
+            fs.writeFileSync('page-text.txt', allText);
+            console.log(`✅ ${allText.length} کاراکتر کپی شد`);
           }
         }
         
@@ -165,7 +172,7 @@ jobs:
                 
                 const commands = content.split('\n')
                   .map(line => line.trim())
-                  .filter(line => line && (line.startsWith('click ') || line.startsWith('type ') || line === 'enter'));
+                  .filter(line => line && (line.startsWith('click ') || line.startsWith('type ') || line === 'enter' || line === 'copy'));
                 
                 console.log(`📝 ${commands.length} دستور پیدا شد`);
                 
@@ -223,7 +230,7 @@ jobs:
                 sleep 1
               done
               
-              for f in screenshot-full.png video*.mp4; do
+              for f in screenshot-full.png video*.mp4 page-text.txt; do
                 if [ -f "$f" ]; then
                   SIZE=$(stat -c %s "$f")
                   MB=$(echo "scale=1; $SIZE/1024/1024" | bc)
@@ -231,7 +238,7 @@ jobs:
                 fi
               done
               
-              git add -f screenshot*.png screenshot-base64.txt video*.mp4 bot.js .gitignore || true
+              git add -f screenshot*.png screenshot-base64.txt video*.mp4 page-text.txt bot.js .gitignore || true
               
               if ! git diff --staged --quiet; then
                 git commit -m "🎥 Multi-Commands + Video | $(date +'%Y-%m-%d %H:%M')" || true
