@@ -87,22 +87,12 @@ jobs:
         }
         
         async function copyPageText() {
-          console.log("📋 Copy تمام متن صفحه...");
+          console.log("📋 Copy متن...");
           const textContent = await page.evaluate(() => {
-            const body = document.body;
-            const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, null, false);
-            let text = '';
-            let node;
-            while (node = walker.nextNode()) {
-              if (node.nodeValue.trim()) {
-                text += node.nodeValue.trim() + '\n';
-              }
-            }
-            return text.trim();
+            return document.body.innerText;
           });
-          
           fs.writeFileSync('page-text.txt', textContent);
-          console.log(`✅ متن کپی شد: ${textContent.length} کاراکتر`);
+          console.log(`✅ متن: ${textContent.length} char`);
         }
         
         async function executeCommand(cmd) {
@@ -123,19 +113,19 @@ jobs:
         }
         
         async function recordVideoWithActions(commands) {
-          console.log("🎥 Video + Multi Actions...");
+          console.log("🎥 Video...");
           
           if (fs.existsSync('frames')) {
             fs.rmSync('frames', { recursive: true, force: true });
           }
           fs.mkdirSync('frames', { recursive: true });
           
-          const fps = 10;
+          const fps = 12;
           const cmdCount = commands.length;
-          const delayPerCmd = cmdCount >= 7 ? 20000 : cmdCount >= 4 ? 15000 : cmdCount === 3 ? 12000 : cmdCount === 2 ? 18000 : 30000;
+          const delayPerCmd = cmdCount >= 7 ? 15000 : cmdCount >= 4 ? 12000 : 20000;
           const uniqueId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
           
-          console.log(`📊 ${cmdCount} دستور - هر کدام ${delayPerCmd/1000}s - ID: ${uniqueId}`);
+          console.log(`📊 ${cmdCount} cmd - ${delayPerCmd/1000}s - ID: ${uniqueId}`);
           
           let frameIndex = 0;
           
@@ -143,40 +133,35 @@ jobs:
             const cmd = commands[cmdIndex];
             
             // Pre frames
-            const preFrames = Math.floor((delayPerCmd / 4) / 1000);
-            for(let i = 0; i < preFrames; i++) {
+            for(let i = 0; i < 3; i++) {
               await page.screenshot({ path: `frames/frame_${uniqueId}_${frameIndex.toString().padStart(6,'0')}.png` });
               frameIndex++;
-              await wait(1000);
+              await wait(800);
             }
             
             await executeCommand(cmd);
             
             // Post frames
-            const postFrames = Math.floor((delayPerCmd * 3 / 4) / 1000);
-            for(let i = 0; i < postFrames; i++) {
+            for(let i = 0; i < 8; i++) {
               await page.screenshot({ path: `frames/frame_${uniqueId}_${frameIndex.toString().padStart(6,'0')}.png` });
               frameIndex++;
-              await wait(1000);
+              await wait(800);
             }
           }
           
-          // FINAL screenshot قبل از پاک کردن frames
+          // Screenshot FINAL
           await takeScreenshot();
           
           const output = `video_${uniqueId}.mp4`;
           try {
-            execSync(`ffmpeg -y -r ${fps} -i frames/frame_${uniqueId}_%06d.png -c:v libx264 -pix_fmt yuv420p -crf 18 -preset medium ${output}`, { timeout: 60000 });
+            execSync(`ffmpeg -y -r ${fps} -i frames/frame_${uniqueId}_%06d.png -c:v libx264 -pix_fmt yuv420p -crf 20 -preset fast -t 30 ${output}`, { timeout: 60000 });
             const stats = fs.statSync(output);
-            console.log(`✅ Video ${frameIndex} frames: ${Math.round(stats.size / 1024 / 1024 * 100) / 100}MB`);
+            console.log(`✅ Video ${frameIndex} frames: ${Math.round(stats.size/1024/1024*100)/100}MB`);
           } catch(e) {
             console.error("❌ FFmpeg:", e.message);
           }
           
-          // frames رو آخر پاک کن
-          if (fs.existsSync('frames')) {
-            fs.rmSync('frames', { recursive: true, force: true });
-          }
+          fs.rmSync('frames', { recursive: true, force: true });
         }
         
         (async () => {
@@ -197,11 +182,11 @@ jobs:
                   .map(line => line.trim())
                   .filter(line => line && (line.startsWith('click ') || line.startsWith('type ') || line === 'enter' || line === 'copy'));
                 
-                console.log(`📝 ${commands.length} دستور پیدا شد: ${commands.join(', ')}`);
+                console.log(`📝 ${commands.length} دستور`);
                 
                 await recordVideoWithActions(commands);
                 
-                fs.writeFileSync('response.txt', `✅ ${commands.length} دستور OK!`);
+                fs.writeFileSync('response.txt', `✅ ${commands.length} OK!`);
                 fs.unlinkSync('command_pipe.txt');
               }
             } catch(e) {
@@ -220,64 +205,70 @@ jobs:
       run: |
         export DISPLAY=:99
         Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
+        sleep 2
         
-        git config user.name "Screenshot Bot"
-        git config user.email "bot@github.com"
-        git config --global core.filemode false
+        git config --global user.name "Screenshot Bot"
+        git config --global user.email "bot@github.com"
+        git config core.fileMode false
         
-        rm -f last_command.txt command_pipe.txt response.txt page-text.txt screenshot*.png video*.mp4 screenshot-base64.txt
+        rm -rf last_command.txt command_pipe.txt response.txt screenshot* video* page-text.txt frames/
         
         timeout 7200 node bot.js &
         BOT_PID=$!
-        echo "🤖 $BOT_PID"
+        echo "🤖 PID: $BOT_PID"
         sleep 45
         
         while true; do
-          git pull origin main --ff-only || git reset --hard origin/main
+          git fetch origin
+          git reset --hard origin/main
           
           if [ -f command.txt ]; then
             CONTENT=$(cat command.txt)
             LAST_CMD=$(cat last_command.txt 2>/dev/null || echo "")
             
             if [ "$CONTENT" != "exit" ] && [ "$CONTENT" != "$LAST_CMD" ]; then
-              echo "🆕 $CONTENT"
-              rm -f command_pipe.txt response.txt page-text.txt screenshot*.png video*.mp4 screenshot-base64.txt
+              echo "🆕 COMMAND: $CONTENT"
+              rm -f command_pipe.txt response.txt screenshot* video* page-text.txt
               echo "$CONTENT" > command_pipe.txt
               
-              for i in {1..360}; do
+              for i in {1..400}; do
                 if [ -f response.txt ]; then
-                  cat response.txt
+                  echo "$(cat response.txt)"
                   rm -f response.txt command_pipe.txt
                   break
                 fi
                 sleep 1
               done
               
-              # چک کردن فایل‌های تولید شده
-              HAS_FILES=false
-              for f in screenshot-full.png screenshot.png screenshot-base64.txt video_*.mp4 page-text.txt; do
+              # لیست فایل‌ها
+              echo "=== FILES ==="
+              find . -maxdepth 1 -name "screenshot*" -o -name "video*" -o -name "page-text.txt" | while read f; do
                 if [ -f "$f" ]; then
-                  SIZE=$(stat -c %s "$f" 2>/dev/null || echo 0)
-                  MB=$(echo "scale=2; $SIZE/1024/1024" | bc -l 2>/dev/null || echo "0.00")
-                  echo "📁 $f: ${MB}MB"
-                  HAS_FILES=true
+                  SIZE=$(stat -c %s "$f")
+                  MB=$(echo "scale=2; $SIZE/1024/1024" | bc)
+                  echo "📁 $f: ${MB}MB ($(ls -lh "$f" | awk '{print $5}'))"
                 fi
               done
               
-              if [ "$HAS_FILES" = true ]; then
-                echo "📤 Git add همه فایل‌ها..."
-                git add screenshot*.png screenshot-base64.txt video*.mp4 page-text.txt bot.js .gitignore 2>/dev/null || true
+              # Force add همه فایل‌ها
+              echo "📤 GIT ADD..."
+              git add -f screenshot*.png screenshot-base64.txt video*.mp4 page-text.txt || true
+              git add -f . || true
+              
+              # چک تغییرات
+              if ! git diff --staged --quiet; then
+                git diff --staged --name-only | head -5
+                git commit -m "🎥 Video + Screenshot | $(date '+%Y-%m-%d %H:%M') | $(ls video_*.mp4 2>/dev/null | tail -1 | xargs basename 2>/dev/null || echo 'NO_VIDEO')" || true
                 
-                if ! git diff --staged --quiet; then
-                  git commit -m "🎥 $(ls video_*.mp4 2>/dev/null | tail -1 | xargs basename 2>/dev/null || echo 'Video') + Screenshot | $(date +'%Y-%m-%d %H:%M')" || true
-                  echo "🚀 Push..."
-                  git push origin main --force || git push origin main
+                echo "🚀 GIT PUSH..."
+                git push origin main -f || git push origin HEAD:main -f
+                if [ $? -eq 0 ]; then
                   echo "✅ PUSH موفق!"
                 else
-                  echo "ℹ️ تغییری نبود"
+                  echo "❌ Push fail!"
                 fi
               else
-                echo "⚠️ هیچ فایلی تولید نشد!"
+                echo "ℹ️ No changes to commit"
               fi
               
               echo "$CONTENT" > last_command.txt
@@ -285,5 +276,5 @@ jobs:
             rm -f command.txt
           fi
           
-          sleep 10
+          sleep 8
         done
