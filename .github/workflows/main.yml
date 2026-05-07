@@ -77,33 +77,31 @@ jobs:
           console.log("✅ آماده!");
         }
         
-        async function copyPageText() {
-          console.log("📋 کپی متن صفحه...");
-          const textContent = await page.evaluate(() => {
-            function getAllText(node) {
-              if (node.nodeType === Node.TEXT_NODE) {
-                return node.textContent?.trim() || '';
-              }
-              let text = '';
-              for (let child of node.childNodes) {
-                text += getAllText(child);
-              }
-              return text.trim();
-            }
-            return getAllText(document.body);
-          });
-          
-          const cleanText = textContent.replace(/\s+/g, ' ').trim();
-          fs.writeFileSync('page-text.txt', cleanText);
-          console.log(`✅ متن کپی شد: ${cleanText.length} کاراکتر`);
-        }
-        
         async function takeScreenshot() {
           console.log("📸 Screenshot...");
           await page.screenshot({ path: 'screenshot.png', type: 'png' });
           await page.screenshot({ path: 'screenshot-full.png', fullPage: true, type: 'png' });
           const buffer = await page.screenshot({ type: 'png' });
           fs.writeFileSync("screenshot-base64.txt", buffer.toString('base64'));
+        }
+        
+        async function copyPageText() {
+          console.log("📋 Copy تمام متن صفحه...");
+          const textContent = await page.evaluate(() => {
+            const body = document.body;
+            const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, null, false);
+            let text = '';
+            let node;
+            while (node = walker.nextNode()) {
+              if (node.nodeValue.trim()) {
+                text += node.nodeValue.trim() + '\n';
+              }
+            }
+            return text.trim();
+          });
+          
+          fs.writeFileSync('page-text.txt', textContent);
+          console.log(`✅ متن کپی شد: ${textContent.length} کاراکتر`);
         }
         
         async function executeCommand(cmd) {
@@ -133,7 +131,7 @@ jobs:
           
           const fps = 10;
           const cmdCount = commands.length;
-          const delayPerCmd = cmdCount === 3 ? 10000 : cmdCount === 2 ? 15000 : 30000;
+          const delayPerCmd = cmdCount === 4 ? 8000 : cmdCount === 3 ? 10000 : cmdCount === 2 ? 15000 : 30000;
           const uniqueId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
           
           console.log(`📊 ${cmdCount} دستور - هر کدام ${delayPerCmd/1000}s - ID: ${uniqueId}`);
@@ -195,11 +193,7 @@ jobs:
                 await recordVideoWithActions(commands);
                 await takeScreenshot();
                 
-                let response = `✅ ${commands.length} دستور OK!`;
-                if (commands.includes('copy')) {
-                  response += " + 📋 متن کپی شد";
-                }
-                fs.writeFileSync('response.txt', response);
+                fs.writeFileSync('response.txt', `✅ ${commands.length} دستور OK!`);
                 fs.unlinkSync('command_pipe.txt');
               }
             } catch(e) {
@@ -222,7 +216,7 @@ jobs:
         git config user.name "Screenshot Bot"
         git config user.email "bot@github.com"
         
-        rm -f last_command.txt command_pipe.txt response.txt
+        rm -f last_command.txt command_pipe.txt response.txt page-text.txt
         
         timeout 7200 node bot.js &
         BOT_PID=$!
@@ -238,7 +232,7 @@ jobs:
             
             if [ "$CONTENT" != "exit" ] && [ "$CONTENT" != "$LAST_CMD" ]; then
               echo "🆕 $CONTENT"
-              rm -f command_pipe.txt response.txt
+              rm -f command_pipe.txt response.txt page-text.txt
               echo "$CONTENT" > command_pipe.txt
               
               for i in {1..300}; do
@@ -250,6 +244,7 @@ jobs:
                 sleep 1
               done
               
+              # لیست فایل‌ها
               for f in screenshot-full.png video*.mp4 page-text.txt; do
                 if [ -f "$f" ]; then
                   SIZE=$(stat -c %s "$f")
@@ -258,12 +253,15 @@ jobs:
                 fi
               done
               
-              git add -f screenshot*.png screenshot-base64.txt video*.mp4 page-text.txt bot.js .gitignore || true
+              # فقط فایل‌های موجود را add کن
+              git add -f screenshot*.png screenshot-base64.txt video*.mp4 page-text.txt bot.js .gitignore 2>/dev/null || true
               
               if ! git diff --staged --quiet; then
-                git commit -m "🎥 Multi-Commands + Video | $(date +'%Y-%m-%d %H:%M')" || true
+                git commit -m "🎥 Multi-Commands + Video$( [ -f page-text.txt ] && echo ' + Text' ) | $(date +'%Y-%m-%d %H:%M')" || true
                 git push origin main -f || true
                 echo "✅ Push!"
+              else
+                echo "ℹ️ تغییری نبود"
               fi
               
               echo "$CONTENT" > last_command.txt
