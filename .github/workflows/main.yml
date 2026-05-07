@@ -16,7 +16,7 @@ jobs:
     - name: Install Chrome + FFmpeg
       run: |
         sudo apt-get update
-        sudo apt-get install -y wget gnupg xvfb x11-xkb-utils ffmpeg
+        sudo apt-get install -y wget gnupg xvfb x11-xkb-utils ffmpeg bc
         wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
         echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
         sudo apt-get update
@@ -244,18 +244,18 @@ jobs:
                 sleep 1
               done
               
-              for f in screenshot-full.png video*.mp4 page-text_*.txt; do
+              for f in screenshot*.png video*.mp4 page-text_*.txt; do
                 if [ -f "$f" ]; then
-                  SIZE=$(stat -c %s "$f")
-                  MB=$(echo "scale=1; $SIZE/1024/1024" | bc)
+                  SIZE=$(stat -c %s "$f" 2>/dev/null || echo 0)
+                  MB=$(echo "scale=1; $SIZE/1024/1024" | bc 2>/dev/null || echo 0)
                   echo "📁 $f: ${MB}MB"
                 fi
               done
               
-              git add -f screenshot*.png screenshot-base64.txt video*.mp4 page-text_*.txt bot.js .gitignore || true
+              git add -f screenshot*.png screenshot-base64.txt video*.mp4 page-text_*.txt bot.js .gitignore 2>/dev/null || true
               
               if ! git diff --staged --quiet; then
-                git commit -m "🎥 Multi-Commands + Video + Copy | $(date +'%Y-%m-%d %H:%M')" || true
+                git commit -m "🎥 $(echo $CONTENT | head -c 50) | $(date +'%Y-%m-%d %H:%M')" || true
                 git push origin main -f || true
                 echo "✅ Push!"
               fi
