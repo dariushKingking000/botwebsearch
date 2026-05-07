@@ -56,6 +56,13 @@ async function executeCommand(cmd) {
     await page.keyboard.type(text, { delay: 80 });
   } else if (cmd === "enter") {
     await page.keyboard.press('Enter', { delay: 50 });
+  } else if (cmd === "copy") {
+    console.log("📋 Copy all text...");
+    const allText = await page.evaluate(() => {
+      return document.body.innerText;
+    });
+    fs.writeFileSync('page-text.txt', allText);
+    console.log(`✅ ${allText.length} کاراکتر کپی شد`);
   }
 }
 
@@ -124,7 +131,7 @@ async function recordVideoWithActions(commands) {
         
         const commands = content.split('\n')
           .map(line => line.trim())
-          .filter(line => line && (line.startsWith('click ') || line.startsWith('type ') || line === 'enter'));
+          .filter(line => line && (line.startsWith('click ') || line.startsWith('type ') || line === 'enter' || line === 'copy'));
         
         console.log(`📝 ${commands.length} دستور پیدا شد`);
         
