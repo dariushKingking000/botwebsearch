@@ -1,37 +1,61 @@
-	
+Workspace settings
+General
+Membership
+Authentication
+Environment Variables
+API
+Verified Domains
+Virtual Private Clouds
+Billing and Usage
+User settings
+Account
+Application
+Alpha Features
+Pipedream API
+
+Use the Pipedream API to programmatically interact with your Pipedream workspace, use Pipedream Connect, and more.
+
+Workspace ID
+o_zwIrG4g
+
+Use the Workspace ID when making API requests with a user API key (not necessary with OAuth clients)
+
+OAuth Clients
+
+Create and manage Pipedream OAuth clients to authenticate with the Pipedream API. Learn more here.
+
+New OAuth Client
 NAME
 	
+CLIENT ID
 	
-OWNER
-	
-ACCESS
+CLIENT SECRET
 	
 UPDATED
 	
 
+kingking
 	
-plausible-undamaged-bold
+OBYs9zkn8d1x2oYwtAinGLUGALPXD_zSBeQXfURuQKw
 	
-Untitled Workflow - 5/6/2026, 6:56 PM
-·
-Untitled Workflow - 5/6/2026, 5:05 PM
-·
-Untitled Workflow - 5/6/2026, 11:32 AM
-·
-Untitled Workflow - 5/6/2026, 9:40 AM
+Secret
 	
-K
-me
+1 second ago
 	
-Workspace
+
+
+kingking00
 	
-17 hours ago
+7ZnJfGY992sayVRETdrWkf1iiA6xyAw95VPQpCqsGt0
+	
+Secret
+	
+1 day ago
 	
 Pipedream has joined Workday
 Learn more
-Projects
-New workflow
-New project
+Settings
+Workspace API Clients
 K
 kingkingplmkoyeb-workspace
 kingkingplmkoyeb@gmail.com
@@ -57,3 +81,16 @@ Credits Used
 Active Resources
 Data Stores
 Upgrade
+Create Pipedream OAuth client
+Name
+Credentials
+Client ID
+OBYs9zkn8d1x2oYwtAinGLUGALPXD_zSBeQXfURuQKw
+Client Secret
+tkIwwCeOzp3RYubOQ5KrY0mtbiqLYKg1Oxj-2ZwgVqA
+
+Save these credentials to your secrets manager. The secret won't be displayed again.
+
+Learn more about the Pipedream API
+Cancel
+Close
