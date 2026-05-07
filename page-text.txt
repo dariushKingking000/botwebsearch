@@ -1,96 +1,23 @@
-Workspace settings
-General
-Membership
-Authentication
-Environment Variables
-API
-Verified Domains
-Virtual Private Clouds
-Billing and Usage
-User settings
-Account
-Application
-Alpha Features
-Pipedream API
+Let's confirm you are human
 
-Use the Pipedream API to programmatically interact with your Pipedream workspace, use Pipedream Connect, and more.
+Complete the security check before continuing. This step verifies that you are not a bot, which helps to protect your account and prevent spam.
 
-Workspace ID
-o_zwIrG4g
-
-Use the Workspace ID when making API requests with a user API key (not necessary with OAuth clients)
-
-OAuth Clients
-
-Create and manage Pipedream OAuth clients to authenticate with the Pipedream API. Learn more here.
-
-New OAuth Client
-NAME
-	
-CLIENT ID
-	
-CLIENT SECRET
-	
-UPDATED
-	
-
-kingking
-	
-OBYs9zkn8d1x2oYwtAinGLUGALPXD_zSBeQXfURuQKw
-	
-Secret
-	
-1 second ago
-	
-
-
-kingking00
-	
-7ZnJfGY992sayVRETdrWkf1iiA6xyAw95VPQpCqsGt0
-	
-Secret
-	
-1 day ago
-	
-Pipedream has joined Workday
-Learn more
-Settings
-Workspace API Clients
-K
-kingkingplmkoyeb-workspace
-kingkingplmkoyeb@gmail.com
-Search...
-/
-Workspace
-Build with AI
-alpha
-Projects
-Sources
-Accounts
-Data Stores
-Event History
-Settings
-Resources
-Getting Started
-0/4
-Next: Build a workflow
-Free
-Credits Used
-0
-/100
-Active Resources
-Data Stores
-Upgrade
-Create Pipedream OAuth client
-Name
-Credentials
-Client ID
-OBYs9zkn8d1x2oYwtAinGLUGALPXD_zSBeQXfURuQKw
-Client Secret
-tkIwwCeOzp3RYubOQ5KrY0mtbiqLYKg1Oxj-2ZwgVqA
-
-Save these credentials to your secrets manager. The secret won't be displayed again.
-
-Learn more about the Pipedream API
-Cancel
-Close
+Begin
+العربية
+Čeština
+Dansk
+Deutsch
+English
+Español
+Français
+Bahasa Indonesia
+Italiano
+日本語
+한국어
+Nederlands
+Polski
+Português
+Svenska
+ไทย
+Türkçe
+中文
